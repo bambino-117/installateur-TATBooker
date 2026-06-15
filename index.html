@@ -181,7 +181,6 @@
     </div>
 
     <div class="content">
-        <!-- Détection OS -->
         <div class="os-detection" id="osDetection">
             <div class="os-badge" id="osBadge">
                 <span>🖥️</span>
@@ -189,12 +188,8 @@
             </div>
         </div>
 
-        <!-- Instructions -->
-        <div id="instructions">
-            <!-- Rempli par JS -->
-        </div>
+        <div id="instructions"></div>
 
-        <!-- Téléchargement alternatif -->
         <div style="text-align: center; margin-top: 24px;">
             <a href="#" id="downloadLink" class="download-btn" download>📥 Télécharger le script d'installation</a>
         </div>
@@ -206,143 +201,234 @@
 </div>
 
 <script>
-    // Détection de l'OS
+    // ============================================================
+    // CONFIGURATION - À MODIFIER SI NÉCESSAIRE
+    // ============================================================
+    const REPO_URL = "https://github.com/bambino-117/TATBooker---Developpement.git";
+    const REPO_RAW = "https://raw.githubusercontent.com/bambino-117/TATBooker---Developpement/main";
+    const MAIN_FILE = "main.py";
+    const REQUIREMENTS = "requirements.txt";
+    
+    // Noms des scripts d'installation (à la racine de votre dépôt)
+    const SCRIPTS = {
+        windows: "INSTALLER.bat",
+        linux: "install.sh",
+        macos: "install.command"
+    };
+    // ============================================================
+
     function detectOS() {
-        const userAgent = navigator.userAgent.toLowerCase();
-        
-        if (userAgent.includes('win')) {
-            return { name: 'Windows', type: 'windows', icon: '🪟' };
-        } else if (userAgent.includes('mac')) {
-            return { name: 'macOS', type: 'macos', icon: '🍎' };
-        } else if (userAgent.includes('linux')) {
-            // Détection de ChromeOS (souvent Linux)
-            if (userAgent.includes('cros')) {
-                return { name: 'ChromeOS Flex', type: 'chromeos', icon: '🌐' };
-            }
+        const ua = navigator.userAgent.toLowerCase();
+        if (ua.includes('win')) return { name: 'Windows', type: 'windows', icon: '🪟' };
+        if (ua.includes('mac')) return { name: 'macOS', type: 'macos', icon: '🍎' };
+        if (ua.includes('linux')) {
+            if (ua.includes('cros')) return { name: 'ChromeOS Flex', type: 'chromeos', icon: '🌐' };
             return { name: 'Linux', type: 'linux', icon: '🐧' };
-        } else {
-            return { name: 'Non détecté', type: 'unknown', icon: '❓' };
         }
+        return { name: 'Non détecté', type: 'unknown', icon: '❓' };
     }
 
-    // Contenu des instructions
-    const instructions = {
+    const os = detectOS();
+    document.getElementById('osBadge').innerHTML = `<span>${os.icon}</span><span>${os.name} détecté</span>`;
+    document.getElementById('osBadge').className = `os-badge ${os.type}`;
+
+    const instructionsMap = {
         windows: {
             steps: [
-                { text: 'Téléchargez le script ci-dessous (ou cliquez sur "Télécharger")' },
-                { text: 'Faites **clic droit** sur le fichier → "Exécuter en tant qu\'administrateur"' },
-                { text: 'Patientez pendant l\'installation automatique' },
-                { text: 'Un raccourci apparaîtra sur votre Bureau' }
+                "Téléchargez le script ci-dessous (ou cliquez sur 'Télécharger')",
+                "Faites **clic droit** sur le fichier → 'Exécuter en tant qu'administrateur'",
+                "Patientez pendant l'installation automatique",
+                "Un raccourci apparaîtra sur votre Bureau"
             ],
-            command: '@echo off\r\ntitle TATBooker Installer\r\necho Installation de TATBooker...\r\n\r\n:: Vérifier droits admin\r\nnet session >nul 2>&1\r\nif %errorlevel% neq 0 (\r\n    echo Droits administrateur requis\r\n    pause\r\n    exit /b 1\r\n)\r\n\r\n:: Détection architecture\r\nif "%PROCESSOR_ARCHITECTURE%"=="AMD64" (\r\n    set PYTHON_URL=https://www.python.org/ftp/python/3.12.0/python-3.12.0-amd64.exe\r\n) else (\r\n    set PYTHON_URL=https://www.python.org/ftp/python/3.12.0/python-3.12.0.exe\r\n)\r\n\r\n:: Installation de Python si absent\r\nwhere python >nul 2>&1\r\nif %errorlevel% neq 0 (\r\n    echo Téléchargement de Python...\r\n    powershell -Command "Invoke-WebRequest -Uri %PYTHON_URL% -OutFile %temp%\\python-installer.exe"\r\n    start /wait %temp%\\python-installer.exe /quiet InstallAllUsers=1 PrependPath=1\r\n    del %temp%\\python-installer.exe\r\n)\r\n\r\n:: Cloner le dépôt\r\nset APP_DIR=%USERPROFILE%\\TATBooker\r\nif not exist "%APP_DIR%" (\r\n    git clone https://github.com/bambino-117/tatbooker.git "%APP_DIR%" 2>nul || (\r\n        echo Git non trouvé. Installation avec ZIP...\r\n        powershell -Command "Invoke-WebRequest -Uri 'https://github.com/votre-compte/tatbooker/archive/main.zip' -OutFile %temp%\\tatbooker.zip"\r\n        powershell -Command "Expand-Archive -Path %temp%\\tatbooker.zip -DestinationPath %USERPROFILE%"\r\n        move "%USERPROFILE%\\tatbooker-main" "%APP_DIR%"\r\n    )\r\n)\r\n\r\ncd /d "%APP_DIR%"\r\n\r\n:: Environnement virtuel\r\npython -m venv venv\r\ncall venv\\Scripts\\activate.bat\r\npip install -r requirements.txt\r\n\r\n:: Raccourci Bureau\r\npowershell -Command "$WS = New-Object -ComObject WScript.Shell; $SC = $WS.CreateShortcut('%USERPROFILE%\\Desktop\\TATBooker.lnk'); $SC.TargetPath = '%APP_DIR%\\venv\\Scripts\\python.exe'; $SC.Arguments = '%APP_DIR%\\main.py'; $SC.Save()"\r\n\r\necho Installation terminée !\r\npause',
-            scriptName: 'install_TATBooker.bat'
+            commandContent: `@echo off
+chcp 65001 > nul
+title TATBooker - Installateur automatique
+color 0A
+
+net session >nul 2>&1
+if %errorlevel% neq 0 (
+    echo Droits administrateur requis. Clic droit -> Executer en tant qu'administrateur
+    pause
+    exit /b 1
+)
+
+echo Installation de TATBooker...
+where git >nul 2>&1
+if %errorlevel% neq 0 (
+    echo Git non trouve. Installation...
+    powershell -Command "Invoke-WebRequest -Uri 'https://github.com/git-for-windows/git/releases/download/v2.45.0.windows.1/Git-2.45.0-64-bit.exe' -OutFile '%temp%\\GitInstaller.exe'"
+    start /wait %temp%\\GitInstaller.exe /VERYSILENT /NORESTART
+    del %temp%\\GitInstaller.exe
+)
+
+set APP_DIR=%USERPROFILE%\\TATBooker
+if exist "%APP_DIR%" (
+    cd /d "%APP_DIR%"
+    git pull
+) else (
+    git clone ${REPO_URL} "%APP_DIR%"
+    cd /d "%APP_DIR%"
+)
+
+where python >nul 2>&1
+if %errorlevel% neq 0 (
+    if "%PROCESSOR_ARCHITECTURE%"=="AMD64" (
+        set PYTHON_URL=https://www.python.org/ftp/python/3.12.0/python-3.12.0-amd64.exe
+    ) else (
+        set PYTHON_URL=https://www.python.org/ftp/python/3.12.0/python-3.12.0.exe
+    )
+    powershell -Command "Invoke-WebRequest -Uri %PYTHON_URL% -OutFile '%temp%\\PythonInstaller.exe'"
+    start /wait %temp%\\PythonInstaller.exe /quiet InstallAllUsers=1 PrependPath=1
+    del %temp%\\PythonInstaller.exe
+)
+
+if not exist "venv" python -m venv venv
+call venv\\Scripts\\activate.bat
+python -m pip install --upgrade pip
+pip install -r ${REQUIREMENTS}
+
+powershell -Command "$WS = New-Object -ComObject WScript.Shell; $SC = $WS.CreateShortcut('%USERPROFILE%\\Desktop\\TATBooker.lnk'); $SC.TargetPath = '%APP_DIR%\\venv\\Scripts\\python.exe'; $SC.Arguments = '%APP_DIR%\\\\${MAIN_FILE}'; $SC.Save()"
+
+echo Installation terminee !
+pause`,
+            scriptName: "INSTALLER_TATBooker.bat"
         },
         linux: {
             steps: [
-                { text: 'Ouvrez un terminal (Ctrl+Alt+T)' },
-                { text: 'Copiez-collez la commande ci-dessous et appuyez sur Entrée' },
-                { text: 'Patientez pendant l\'installation' },
-                { text: 'TATBooker sera disponible dans votre menu Applications' }
+                "Ouvrez un terminal (Ctrl+Alt+T)",
+                "Copiez-collez la commande ci-dessous",
+                "Patientez pendant l'installation",
+                "TATBooker sera dans votre menu Applications"
             ],
-            command: 'bash -c "$(curl -fsSL https://raw.githubusercontent.com/bambino-117/TATBooker---developpement/main/install.sh)"',
-            scriptName: 'install_TATBooker.sh'
+            commandContent: `#!/bin/bash
+echo "Installation TATBooker..."
+if ! command -v git &> /dev/null; then
+    if command -v apt &> /dev/null; then sudo apt update && sudo apt install -y git
+    elif command -v pacman &> /dev/null; then sudo pacman -S --noconfirm git
+    elif command -v dnf &> /dev/null; then sudo dnf install -y git
+    else echo "Installez Git manuellement"; exit 1; fi
+fi
+
+APP_DIR="$HOME/TATBooker"
+if [ -d "$APP_DIR" ]; then cd "$APP_DIR" && git pull
+else git clone ${REPO_URL} "$APP_DIR" && cd "$APP_DIR"
+fi
+
+if ! command -v python3 &> /dev/null; then
+    if command -v apt &> /dev/null; then sudo apt install -y python3 python3-pip python3-venv
+    elif command -v pacman &> /dev/null; then sudo pacman -S --noconfirm python python-pip
+    elif command -v dnf &> /dev/null; then sudo dnf install -y python3 python3-pip
+    else echo "Installez Python3 manuellement"; exit 1; fi
+fi
+
+if [ ! -d "venv" ]; then python3 -m venv venv; fi
+source venv/bin/activate
+pip install --upgrade pip
+pip install -r ${REQUIREMENTS}
+
+mkdir -p ~/.local/share/applications
+cat > ~/.local/share/applications/tatbooker.desktop << EOF
+[Desktop Entry]
+Name=TATBooker
+Exec=$APP_DIR/venv/bin/python3 $APP_DIR/${MAIN_FILE}
+Icon=$APP_DIR/icon.png
+Terminal=false
+Type=Application
+Categories=Office;
+EOF
+
+echo "Installation terminee !"`,
+            scriptName: "install_TATBooker.sh"
         },
         macos: {
             steps: [
-                { text: 'Téléchargez le script ci-dessous (ou cliquez sur "Télécharger")' },
-                { text: 'Ouvrez un Terminal et tapez : `chmod +x ~/Downloads/install_TATBooker.command`' },
-                { text: 'Double-cliquez sur le fichier pour lancer l\'installation' },
-                { text: 'Suivez les instructions à l\'écran' }
+                "Téléchargez le script ci-dessous",
+                "Dans le Terminal : chmod +x ~/Downloads/install_TATBooker.command",
+                "Double-cliquez sur le fichier",
+                "Suivez les instructions"
             ],
-            command: '#!/bin/bash\r\necho "Installation TATBooker sur macOS..."\r\n\r\n# Vérifier Homebrew\r\nif ! command -v brew &> /dev/null; then\r\n    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"\r\nfi\r\n\r\n# Installer Git\r\nbrew install git\r\n\r\n# Cloner le dépôt\r\ncd ~\r\ngit clone https://github.com/votre-compte/tatbooker.git TATBooker\r\ncd TATBooker\r\n\r\n# Python via Homebrew\r\nbrew install python@3.12\r\n\r\n# Environnement virtuel\r\npython3 -m venv venv\r\nsource venv/bin/activate\r\npip install -r requirements.txt\r\n\r\necho "Installation terminée !"\r\nread -p "Appuyez sur Entrée pour quitter"',
-            scriptName: 'install_TATBooker.command'
+            commandContent: `#!/bin/bash
+echo "Installation TATBooker sur macOS..."
+if ! command -v brew &> /dev/null; then
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+fi
+brew install git python@3.12
+
+APP_DIR="$HOME/TATBooker"
+if [ -d "$APP_DIR" ]; then cd "$APP_DIR" && git pull
+else git clone ${REPO_URL} "$APP_DIR" && cd "$APP_DIR"
+fi
+
+if [ ! -d "venv" ]; then python3 -m venv venv; fi
+source venv/bin/activate
+pip install --upgrade pip
+pip install -r ${REQUIREMENTS}
+
+echo "Installation terminee !"`,
+            scriptName: "install_TATBooker.command"
         },
         chromeos: {
             steps: [
-                { text: 'Activez le Linux Developer Environment (Paramètres → Développeurs → Linux)' },
-                { text: 'Ouvrez le terminal Linux (dans la fenêtre du conteneur)' },
-                { text: 'Copiez-collez la commande ci-dessous' },
-                { text: 'Patientez pendant l\'installation' }
+                "Activez Linux (Paramètres → Développeurs → Linux)",
+                "Ouvrez le terminal Linux",
+                "Copiez-collez la commande ci-dessous"
             ],
-            command: 'sudo apt update && sudo apt install -y git python3 python3-pip python3-venv\r\ngit clone https://github.com/votre-compte/tatbooker.git ~/TATBooker\r\ncd ~/TATBooker\r\npython3 -m venv venv\r\nsource venv/bin/activate\r\npip install -r requirements.txt\r\necho "Installation terminée !"',
-            scriptName: 'install_TATBooker_chromeos.sh'
+            commandContent: `sudo apt update
+sudo apt install -y git python3 python3-pip python3-venv
+git clone ${REPO_URL} ~/TATBooker
+cd ~/TATBooker
+python3 -m venv venv
+source venv/bin/activate
+pip install -r ${REQUIREMENTS}
+echo "Installation terminee !"`,
+            scriptName: "install_TATBooker_chromeos.sh"
         },
         unknown: {
             steps: [
-                { text: 'Votre système n\'a pas été automatiquement détecté.' },
-                { text: 'TATBooker fonctionne sur Windows, macOS, Linux et ChromeOS.' },
-                { text: 'Visitez notre documentation pour l\'installation manuelle :' }
+                "Votre système n'a pas été détecté automatiquement.",
+                "TATBooker fonctionne sur Windows, macOS, Linux et ChromeOS.",
+                "Visitez le dépôt pour l'installation manuelle :"
             ],
-            command: 'https://github.com/votre-compte/tatbooker#installation',
+            commandContent: REPO_URL,
             scriptName: null
         }
     };
 
-    // Mise à jour de l'interface
-    const os = detectOS();
-    const osInfo = instructions[os.type];
-
-    // Mettre à jour le badge OS
-    document.getElementById('osBadge').innerHTML = `<span>${os.icon}</span><span>${os.name} détecté</span>`;
-    document.getElementById('osBadge').className = `os-badge ${os.type}`;
-
-    // Générer les instructions
+    const info = instructionsMap[os.type];
     const instructionsDiv = document.getElementById('instructions');
     
     let html = `<div class="instruction-box">`;
     html += `<div class="instruction-title">📋 INSTRUCTIONS (${os.name})</div>`;
     
-    // Étapes
-    osInfo.steps.forEach((step, idx) => {
-        html += `
-            <div class="step">
-                <div class="step-number">${idx + 1}</div>
-                <div>${step.text}</div>
-            </div>
-        `;
+    info.steps.forEach((step, idx) => {
+        html += `<div class="step"><div class="step-number">${idx+1}</div><div>${step}</div></div>`;
     });
     
-    // Commande
-    if (osInfo.command && !osInfo.command.startsWith('http')) {
-        html += `
-            <div class="instruction-title" style="margin-top: 16px;">💻 À copier dans le terminal</div>
-            <div class="command" id="commandText">${osInfo.command}</div>
-            <button class="copy-btn" onclick="copyCommand()">📋 Copier la commande</button>
-        `;
-    } else if (osInfo.command && osInfo.command.startsWith('http')) {
-        html += `
-            <div class="instruction-title" style="margin-top: 16px;">🔗 Lien vers la documentation</div>
-            <div class="command"><a href="${osInfo.command}" target="_blank" style="color:#a78bfa;">${osInfo.command}</a></div>
-        `;
+    if (info.commandContent && !info.commandContent.startsWith('http')) {
+        html += `<div class="instruction-title" style="margin-top:16px;">💻 À copier dans le terminal</div>`;
+        html += `<div class="command" id="commandText">${info.commandContent.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`;
+        html += `<button class="copy-btn" onclick="copyCommand()">📋 Copier la commande</button>`;
+    } else if (info.commandContent && info.commandContent.startsWith('http')) {
+        html += `<div class="command"><a href="${info.commandContent}" target="_blank" style="color:#a78bfa;">${info.commandContent}</a></div>`;
     }
     
     html += `</div>`;
     instructionsDiv.innerHTML = html;
 
-    // Gérer le téléchargement du script
     const downloadLink = document.getElementById('downloadLink');
-    if (osInfo.scriptName) {
-        // Générer un blob pour le téléchargement
-        let scriptContent = osInfo.command;
-        
-        // Pour Windows, garder tel quel. Pour Linux/macOS, s'assurer du shebang
-        if (os.type === 'linux' && !scriptContent.startsWith('#!/bin/bash')) {
-            scriptContent = '#!/bin/bash\n\n' + scriptContent;
-        }
-        
-        const blob = new Blob([scriptContent], { type: 'text/plain' });
+    if (info.scriptName) {
+        const blob = new Blob([info.commandContent], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         downloadLink.href = url;
-        downloadLink.download = osInfo.scriptName;
-        downloadLink.textContent = `📥 Télécharger ${osInfo.scriptName}`;
+        downloadLink.download = info.scriptName;
+        downloadLink.textContent = `📥 Télécharger ${info.scriptName}`;
     } else {
         downloadLink.style.display = 'none';
     }
 
-    // Fonction de copie
     window.copyCommand = function() {
-        const commandText = document.getElementById('commandText').innerText;
-        navigator.clipboard.writeText(commandText);
+        const text = document.getElementById('commandText').innerText;
+        navigator.clipboard.writeText(text);
         alert('Commande copiée dans le presse-papier !');
     };
 </script>
