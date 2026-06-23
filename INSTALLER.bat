@@ -4,6 +4,13 @@ setlocal EnableDelayedExpansion
 title TATBooker - Installation Automatique Blindée
 color 0A
 
+whoami /groups | find "S-1-5-32-544" >nul
+if %errorlevel% neq 0 (
+    echo Droits administrateur requis. Clic droit -> Executer en tant qu'administrateur
+    pause
+    exit /b 1
+)
+
 :: ============================================================================
 :: TATBooker - Installateur Windows Ultra-Blindé
 :: Gère: Détection, Téléchargement, Installation, Validation, Rollback
