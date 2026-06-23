@@ -4,6 +4,12 @@ setlocal EnableDelayedExpansion
 title TATBooker - Installation Automatique Blindée
 color 0A
 
+:: === DEBUG MODE ACTIVATED ===
+echo [DEBUG] Script demarre ! > "%TEMP%\tatbooker_debug.txt"
+echo [DEBUG] Repertoire: %CD% >> "%TEMP%\tatbooker_debug.txt"
+echo [DEBUG] PATH: %PATH% >> "%TEMP%\tatbooker_debug.txt"
+pause
+
 whoami /groups | find "S-1-5-32-544" >nul
 if %errorlevel% neq 0 (
     echo Droits administrateur requis. Clic droit -> Executer en tant qu'administrateur
