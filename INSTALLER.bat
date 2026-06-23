@@ -209,8 +209,14 @@ echo [%time%] Phase 3: Python >> "%LOG_FILE%"
 
 where python >nul 2>&1
 if %errorlevel% neq 0 (
+    where py >nul 2>&1
+    if %errorlevel% neq 0 (
     echo   ^> Python non trouve. Installation...
     echo [INFO] Installing Python >> "%LOG_FILE%"
+
+    ) else (
+        set "python=py"
+    )
     
     set "PYTHON_INSTALLER=%TEMP%\PythonInstaller.exe"
     
@@ -315,10 +321,10 @@ if not exist "requirements.txt" (
 echo   ^> Installation en cours...
 echo   ^> (beautifulsoup4, Flask, pywebview, cryptography, etc...)
 
-pip install -r requirements.txt --quiet >> "%LOG_FILE%" 2>&1
+python -m pip install -r requirements.txt --quiet >> "%LOG_FILE%" 2>&1
 if %errorlevel% neq 0 (
     echo [AVERTISSEMENT] Echec installation, nouvelle tentative sans cache...
-    pip install -r requirements.txt --no-cache-dir >> "%LOG_FILE%" 2>&1
+    python -m pip install -r requirements.txt --no-cache-dir >> "%LOG_FILE%" 2>&1
     if %errorlevel% neq 0 (
         echo [ERREUR] Echec installation dependances
         echo [ERROR] Dependencies install failed >> "%LOG_FILE%"
@@ -448,7 +454,7 @@ if exist "%ICON_PATH%" (
 )
 
 :: Créer raccourci Bureau
-powershell -Command "$WS = New-Object -ComObject WScript.Shell; $SC = $WS.CreateShortcut('%SHORTCUT%'); $SC.TargetPath = '%PYTHON_EXE%'; $SC.Arguments = '%MAIN_SCRIPT%'; $SC.WorkingDirectory = '%APP_DIR%'; $SC.IconLocation = '%ICON_PATH%'; $SC.Save()" >> "%LOG_FILE%" 2>&1
+powershell -Command "$WS = New-Object -ComObject WScript.Shell; $SC = $WS.CreateShortcut('%SHORTCUT%'); $SC.TargetPath = '"%PYTHON_EXE%"'; $SC.Arguments = '"%MAIN_SCRIPT%"'; $SC.WorkingDirectory = '%APP_DIR%'; $SC.IconLocation = '%ICON_PATH%'; $SC.Save()" >> "%LOG_FILE%" 2>&1
 if %errorlevel% equ 0 (
     echo   ^> Raccourci Bureau cree: TATBooker.lnk
     echo [OK] Desktop shortcut created >> "%LOG_FILE%"
