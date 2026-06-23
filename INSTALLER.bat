@@ -102,10 +102,17 @@ if %errorlevel% neq 0 (
 )
 
 :: Vérifier PowerShell (minimum 3.0)
-for /f "tokens=*" %%a in ('powershell -Command "$PSVersionTable.PSVersion.Major" 2^>^&1') do set PS_VERSION=%%a
+set "PS_VERSION=0"
+for /f "delims=" %%a in ('powershell -NoProfile -Command "$PSVersionTable.PSVersion.Major" 2^>nul') do set "PS_VERSION=%%a"
+if "%PS_VERSION%"=="" set "PS_VERSION=0"
+echo   ^> PowerShell version detectee: %PS_VERSION%
+
 if %PS_VERSION% LSS 3 (
     echo [ERREUR] PowerShell 3.0+ requis (version detectee: %PS_VERSION%)
     echo [ERROR] PowerShell version too old >> "%LOG_FILE%"
+    echo.
+    echo Téléchargez PowerShell 7 : https://aka.ms/powershell
+    echo Ou installez Windows Management Framework 5.1
     pause
     exit /b 1
 )
