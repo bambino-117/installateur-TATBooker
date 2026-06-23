@@ -11,6 +11,16 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
+:: ============================================
+:: MODE DEBUG - Pour voir les erreurs
+:: ============================================
+set "DEBUG_MODE=1"
+if "%DEBUG_MODE%"=="1" (
+    echo [DEBUG] Script lance a %date% %time%
+    echo [DEBUG] Repertoire: %CD%
+    pause
+)
+
 :: ============================================================================
 :: TATBooker - Installateur Windows Ultra-Blindé
 :: Gère: Détection, Téléchargement, Installation, Validation, Rollback
@@ -276,23 +286,32 @@ set /a STEP+=1
 echo [%STEP%/9] Configuration environnement virtuel...
 echo [%time%] Phase 4: Venv >> "%LOG_FILE%"
 
-if exist "venv" (
-    echo   ^> Environnement virtuel existant detecte
+if exist "%APP_DIR%\venv" (
+    echo   ^> Environnement virtuel existant
     echo [OK] Venv exists >> "%LOG_FILE%"
 ) else (
     echo   ^> Creation environnement virtuel...
-    python -m venv venv >> "%LOG_FILE%" 2>&1
+    "%APP_DIR%\venv\Scripts\python.exe" -m venv "%APP_DIR%\venv" >> "%LOG_FILE%" 2>&1
     if %errorlevel% neq 0 (
         echo [ERREUR] Echec creation venv
         echo [ERROR] Venv creation failed >> "%LOG_FILE%"
-        set /a ERROR_COUNT+=1
+        pause
         goto :CLEANUP_ERROR
     )
-    echo   ^> Environnement virtuel cree
+    echo   ^> Venv cree
     echo [OK] Venv created >> "%LOG_FILE%"
 )
 
-call venv\Scripts\activate.bat
+:: Activer venv
+call "%APP_DIR%\venv\Scripts\activate.bat"
+if %errorlevel% neq 0 (
+    echo [ERREUR] Echec activation venv
+    echo [ERROR] Venv activation failed >> "%LOG_FILE%"
+    pause
+    goto :CLEANUP_ERROR
+)
+set "PYTHON_EXE=%APP_DIR%\venv\Scripts\python.exe"
+echo [OK] Venv active avec Python: %PYTHON_EXE% >> "%LOG_FILE%"
 echo.
 
 :: ============================================================================
@@ -313,36 +332,39 @@ if %errorlevel% equ 0 (
 echo.
 
 :: ============================================================================
-:: PHASE 6: INSTALLATION DEPENDANCES (CRITIQUE)
+:: PHASE 6: DEPENDANCES (AVEC DEBUG)
 :: ============================================================================
 set /a STEP+=1
-echo [%STEP%/9] Installation des dependances (peut prendre 5-10 min)...
+echo [%STEP%/9] Installation des dependances...
 echo [%time%] Phase 6: Dependencies >> "%LOG_FILE%"
 
-if not exist "requirements.txt" (
-    echo [ERREUR CRITIQUE] Fichier requirements.txt manquant
+if not exist "%APP_DIR%\requirements.txt" (
+    echo [ERREUR CRITIQUE] requirements.txt manquant
     echo [ERROR] requirements.txt missing >> "%LOG_FILE%"
+    pause
     goto :CLEANUP_ERROR
 )
 
-echo   ^> Installation en cours...
-echo   ^> (beautifulsoup4, Flask, pywebview, cryptography, etc...)
+echo   ^> Installation des packages...
+echo   ^> PYTHON_EXE: %PYTHON_EXE%
+echo   ^> %PYTHON_EXE% -m pip install --upgrade pip
 
-python -m pip install -r requirements.txt --quiet >> "%LOG_FILE%" 2>&1
+"%PYTHON_EXE%" -m pip install --upgrade pip >> "%LOG_FILE%" 2>&1
+echo   ^> %PYTHON_EXE% -m pip install -r requirements.txt
+
+"%PYTHON_EXE%" -m pip install -r "%APP_DIR%\requirements.txt" >> "%LOG_FILE%" 2>&1
 if %errorlevel% neq 0 (
-    echo [AVERTISSEMENT] Echec installation, nouvelle tentative sans cache...
-    python -m pip install -r requirements.txt --no-cache-dir >> "%LOG_FILE%" 2>&1
+    echo [AVERTISSEMENT] Echec installation, tentative sans cache...
+    "%PYTHON_EXE%" -m pip install -r "%APP_DIR%\requirements.txt" --no-cache-dir >> "%LOG_FILE%" 2>&1
     if %errorlevel% neq 0 (
         echo [ERREUR] Echec installation dependances
         echo [ERROR] Dependencies install failed >> "%LOG_FILE%"
-        set /a ERROR_COUNT+=1
+        pause
         goto :CLEANUP_ERROR
     )
 )
-
-echo   ^> Toutes les dependances installees
+echo   ^> Dependances OK
 echo [OK] Dependencies installed >> "%LOG_FILE%"
-echo.
 
 :: ============================================================================
 :: PHASE 7: CONFIGURATION ENVIRONNEMENT (.env, secret.key)
